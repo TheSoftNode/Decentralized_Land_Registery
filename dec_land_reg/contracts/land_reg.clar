@@ -44,3 +44,22 @@
   )
 )
 
+(define-public (accept-transfer (property-id uint))
+  (let ((transfer (map-get? property-transfers { property-id: property-id })))
+    (if (is-none transfer)
+      err-not-found
+      (let ((transfer-data (unwrap-panic transfer)))
+        (if (and (is-eq (get to transfer-data) tx-sender) (is-eq (get status transfer-data) "pending"))
+          (begin
+            (map-set properties { property-id: property-id } { owner: tx-sender, details: (get details (unwrap-panic (map-get? properties { property-id: property-id }))) })
+            (map-delete property-transfers { property-id: property-id })
+            (ok true)
+          )
+          err-owner-only
+        )
+      )
+    )
+  )
+)
+
+
