@@ -27,4 +27,20 @@
   )
 )
 
+(define-public (transfer-property (property-id uint) (new-owner principal))
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-none existing-property)
+      err-not-found
+      (let ((current-owner (get owner (unwrap-panic existing-property))))
+        (if (is-eq tx-sender current-owner)
+          (begin
+            (map-set property-transfers { property-id: property-id } { from: tx-sender, to: new-owner, status: "pending" })
+            (ok true)
+          )
+          err-owner-only
+        )
+      )
+    )
+  )
+)
 
