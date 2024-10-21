@@ -17,3 +17,14 @@
   { from: principal, to: principal, status: (string-ascii 20) }
 )
 
+;; Public Functions
+(define-public (register-property (property-id uint) (details (string-ascii 256)))
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-some existing-property)
+      err-already-registered
+      (ok (map-set properties { property-id: property-id } { owner: tx-sender, details: details }))
+    )
+  )
+)
+
+
