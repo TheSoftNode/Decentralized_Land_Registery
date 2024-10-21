@@ -1,15 +1,8 @@
+;; Decentralized Land Registry
 
-;; land_reg
-;; <add a description here>
+;; Constants
+(define-constant contract-owner tx-sender)
+(define-constant err-owner-only (err u100))
+(define-constant err-not-found (err u101))
+(define-constant err-already-registered (err u102))
 
-;; constants
-;;
-
-;; data maps and vars
-;;
-
-;; private functions
-;;
-
-;; public functions
-;;
