@@ -62,4 +62,12 @@
   )
 )
 
+;; Read-only Functions
+(define-read-only (get-property-details (property-id uint))
+  (map-get? properties { property-id: property-id })
+)
+
+(define-read-only (get-transfer-details (property-id uint))
+  (map-get? property-transfers { property-id: property-id })
+)
 
