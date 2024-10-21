@@ -100,3 +100,4 @@ Clarinet.test({
         assertEquals(block.receipts[0].result, `(some {owner: ${user2.address}, details: "Property 1 details"})`);
     },
 });
+
