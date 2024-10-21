@@ -26,3 +26,21 @@ Clarinet.test({
         assertEquals(block.receipts[0].result, `(some {owner: ${user1.address}, details: "Property 1 details"})`);
     },
 });
+
+Clarinet.test({
+    name: "Ensure that a property cannot be registered twice",
+    async fn(chain: Chain, accounts: Map<string, Account>)
+    {
+        const user1 = accounts.get('wallet_1')!;
+
+        let block = chain.mineBlock([
+            Tx.contractCall('land-registry', 'register-property', [types.uint(1), types.ascii("Property 1 details")], user1.address),
+            Tx.contractCall('land-registry', 'register-property', [types.uint(1), types.ascii("Duplicate property")], user1.address)
+        ]);
+
+        assertEquals(block.receipts.length, 2);
+        assertEquals(block.height, 2);
+        assertEquals(block.receipts[0].result, '(ok true)');
+        assertEquals(block.receipts[1].result, '(err u102)'); // err-already-registered
+    },
+});
