@@ -243,3 +243,25 @@
   (map-get? property-transfers { property-id: property-id })
 )
 
+(define-read-only (get-property-history (property-id uint) (index uint))
+  (map-get? property-history { property-id: property-id, index: index })
+)
+
+(define-read-only (get-last-history-index (property-id uint))
+  (let ((history (map-get? property-history { property-id: property-id, index: u0 })))
+    (if (is-none history)
+      u0
+      (fold check-next-index (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10) u0 property-id)
+    )
+  )
+)
+
+(define-private (check-next-index (index uint) (last-index uint) (property-id uint))
+  (let ((history (map-get? property-history { property-id: property-id, index: index })))
+    (if (is-some history)
+      index
+      last-index
+    )
+  )
+)
+
