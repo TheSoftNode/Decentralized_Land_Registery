@@ -188,6 +188,52 @@
   )
 )
 
+(define-public (accept-transfer (property-id uint))
+  (let ((transfer (map-get? property-transfers { property-id: property-id })))
+    (if (is-none transfer)
+      err-not-found
+      (let (
+        (transfer-data (unwrap-panic transfer))
+        (existing-property (unwrap-panic (map-get? properties { property-id: property-id })))
+        (history-index (default-to u0 (get-last-history-index property-id)))
+      )
+        (if (and 
+          (is-eq (get to transfer-data) tx-sender)
+          (is-eq (get status transfer-data) "pending")
+        )
+          (begin
+            ;; Update property ownership
+            (map-set properties
+              { property-id: property-id }
+              (merge existing-property
+                {
+                  owner: tx-sender,
+                  for-sale: false,
+                  price: u0
+                }
+              )
+            )
+            ;; Record in history
+            (map-set property-history
+              { property-id: property-id, index: (+ history-index u1) }
+              {
+                previous-owner: (get from transfer-data),
+                new-owner: tx-sender,
+                transfer-date: (get transfer-date transfer-data),
+                price: (get price transfer-data)
+              }
+            )
+            ;; Clean up transfer record
+            (map-delete property-transfers { property-id: property-id })
+            (ok true)
+          )
+          err-owner-only
+        )
+      )
+    )
+  )
+)
+
 ;; Read-only Functions
 (define-read-only (get-property-details (property-id uint))
   (map-get? properties { property-id: property-id })
