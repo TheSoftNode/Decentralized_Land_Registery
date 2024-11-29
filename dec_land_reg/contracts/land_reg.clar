@@ -9,6 +9,21 @@
 (define-constant err-insufficient-funds (err u104))
 (define-constant err-not-for-sale (err u105))
 
+(define-constant err-not-verified (err u106))
+(define-constant err-already-verified (err u107))
+(define-constant err-invalid-dimensions (err u108))
+(define-constant err-invalid-dates (err u109))
+
+;; Add new data maps
+(define-map property-verification
+  { property-id: uint }
+  {
+    verified: bool,
+    verifier: principal,
+    verification-date: uint,
+    verification-expiry: uint
+  }
+)
 
 ;; Data Variables
 (define-map properties
@@ -234,6 +249,33 @@
   )
 )
 
+
+(define-public (verify-property 
+    (property-id uint)
+    (verification-period uint)
+  )
+  (let (
+    (existing-verification (map-get? property-verification { property-id: property-id }))
+    (is-authorized-verifier (is-eq tx-sender contract-owner))
+  )
+    (if (not is-authorized-verifier)
+      err-owner-only
+      (if (and (is-some existing-verification) (get verified (unwrap-panic existing-verification)))
+        err-already-verified
+        (ok (map-set property-verification
+          { property-id: property-id }
+          {
+            verified: true,
+            verifier: tx-sender,
+            verification-date: (get-block-height),
+            verification-expiry: (+ (get-block-height) verification-period)
+          }
+        ))
+      )
+    )
+  )
+)
+
 ;; Read-only Functions
 (define-read-only (get-property-details (property-id uint))
   (map-get? properties { property-id: property-id })
@@ -246,6 +288,25 @@
 (define-read-only (get-property-history (property-id uint) (index uint))
   (map-get? property-history { property-id: property-id, index: index })
 )
+
+(define-read-only (get-property-verification-status (property-id uint))
+  (map-get? property-verification { property-id: property-id })
+)
+
+(define-read-only (is-property-verified (property-id uint))
+  (let ((verification (map-get? property-verification { property-id: property-id })))
+    (if (is-none verification)
+      false
+      (let ((verify-data (unwrap-panic verification)))
+        (and
+          (get verified verify-data)
+          (< (get-block-height) (get verification-expiry verify-data))
+        )
+      )
+    )
+  )
+)
+
 
 (define-read-only (get-last-history-index (property-id uint))
   (let ((history (map-get? property-history { property-id: property-id, index: u0 })))
