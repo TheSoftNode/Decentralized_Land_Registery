@@ -113,6 +113,81 @@
   )
 )
 
+(define-public (list-property-for-sale (property-id uint) (asking-price uint))
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-none existing-property)
+      err-not-found
+      (let ((current-owner (get owner (unwrap-panic existing-property))))
+        (if (and (is-eq tx-sender current-owner) (> asking-price u0))
+          (ok (map-set properties 
+            { property-id: property-id }
+            (merge (unwrap-panic existing-property)
+              {
+                price: asking-price,
+                for-sale: true
+              }
+            )
+          ))
+          err-owner-only
+        )
+      )
+    )
+  )
+)
+
+
+(define-public (remove-property-from-sale (property-id uint))
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-none existing-property)
+      err-not-found
+      (let ((current-owner (get owner (unwrap-panic existing-property))))
+        (if (is-eq tx-sender current-owner)
+          (ok (map-set properties 
+            { property-id: property-id }
+            (merge (unwrap-panic existing-property)
+              {
+                for-sale: false
+              }
+            )
+          ))
+          err-owner-only
+        )
+      )
+    )
+  )
+)
+
+(define-public (buy-property (property-id uint))
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-none existing-property)
+      err-not-found
+      (let (
+        (property-data (unwrap-panic existing-property))
+        (current-owner (get owner property-data))
+        (sale-price (get price property-data))
+        (is-for-sale (get for-sale property-data))
+      )
+        (if (and is-for-sale (not (is-eq tx-sender current-owner)))
+          (begin
+            (map-set property-transfers 
+              { property-id: property-id }
+              {
+                from: current-owner,
+                to: tx-sender,
+                status: "pending",
+                price: sale-price,
+                transfer-date: (get-block-height)
+              }
+            )
+            (ok true)
+          )
+          err-not-for-sale
+        )
+      )
+    )
+  )
+)
+
 ;; Read-only Functions
 (define-read-only (get-property-details (property-id uint))
   (map-get? properties { property-id: property-id })
