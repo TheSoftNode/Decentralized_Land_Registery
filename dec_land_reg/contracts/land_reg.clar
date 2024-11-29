@@ -402,8 +402,6 @@
 )
 
 
-
-
 (define-read-only (get-last-history-index (property-id uint))
   (let ((history (map-get? property-history { property-id: property-id, index: u0 })))
     (if (is-none history)
@@ -420,5 +418,44 @@
       last-index
     )
   )
+)
+
+(define-read-only (get-property-metadata (property-id uint))
+  (map-get? property-metadata { property-id: property-id })
+)
+
+(define-read-only (get-property-verification-status (property-id uint))
+  (map-get? property-verification { property-id: property-id })
+)
+
+(define-read-only (get-property-disputes (property-id uint) (dispute-id uint))
+  (map-get? property-disputes { property-id: property-id, dispute-id: dispute-id })
+)
+
+(define-read-only (is-property-verified (property-id uint))
+  (let ((verification (map-get? property-verification { property-id: property-id })))
+    (if (is-none verification)
+      false
+      (let ((verify-data (unwrap-panic verification)))
+        (and
+          (get verified verify-data)
+          (< (get-block-height) (get verification-expiry verify-data))
+        )
+      )
+    )
+  )
+)
+
+(define-private (get-next-dispute-id (property-id uint))
+  (let ((last-dispute (get-last-dispute property-id)))
+    (if (is-none last-dispute)
+      u1
+      (+ u1 (get dispute-id (unwrap-panic last-dispute)))
+    )
+  )
+)
+
+(define-private (get-last-dispute (property-id uint))
+  (map-get? property-disputes { property-id: property-id, dispute-id: u0 })
 )
 
