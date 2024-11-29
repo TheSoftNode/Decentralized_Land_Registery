@@ -247,9 +247,11 @@
   )
 )
 
-(define-private (get-next-dispute-id (property-id uint))
-  (let ((last-dispute (fold get-max-dispute-id (map-to get-max-dispute-id property-disputes) u0)))
-    (+ last-dispute u1)
+;; Removed duplicate definition of get-next-dispute-id
+
+(define-private (get-last-dispute-id (property-id uint))
+  (let ((disputes (map-to-list property-disputes)))
+    (fold get-max-dispute-id disputes u0)
   )
 )
 
