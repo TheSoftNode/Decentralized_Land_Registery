@@ -14,7 +14,7 @@
 (define-constant err-invalid-dimensions (err u108))
 (define-constant err-invalid-dates (err u109))
 
-;; Add new data maps
+
 (define-map property-verification
   { property-id: uint }
   {
@@ -25,7 +25,16 @@
   }
 )
 
-;; Data Variables
+(define-map property-metadata
+  { property-id: uint }
+  {
+    dimensions: {length: uint, width: uint},
+    zone-type: (string-ascii 64),
+    facilities: (list 10 (string-ascii 64)),
+    last-inspection-date: uint
+  }
+)
+
 (define-map properties
   { property-id: uint }
   {
@@ -203,6 +212,37 @@
   )
 )
 
+(define-public (add-property-metadata 
+    (property-id uint)
+    (length uint)
+    (width uint)
+    (zone-type (string-ascii 64))
+    (facilities (list 10 (string-ascii 64)))
+  )
+  (let ((existing-property (map-get? properties { property-id: property-id })))
+    (if (is-none existing-property)
+      err-not-found
+      (let ((current-owner (get owner (unwrap-panic existing-property))))
+        (if (is-eq tx-sender current-owner)
+          (if (and (> length u0) (> width u0))
+            (ok (map-set property-metadata
+              { property-id: property-id }
+              {
+                dimensions: {length: length, width: width},
+                zone-type: zone-type,
+                facilities: facilities,
+                last-inspection-date: (get-block-height)
+              }
+            ))
+            err-invalid-dimensions
+          )
+          err-owner-only
+        )
+      )
+    )
+  )
+)
+
 (define-public (accept-transfer (property-id uint))
   (let ((transfer (map-get? property-transfers { property-id: property-id })))
     (if (is-none transfer)
@@ -289,23 +329,7 @@
   (map-get? property-history { property-id: property-id, index: index })
 )
 
-(define-read-only (get-property-verification-status (property-id uint))
-  (map-get? property-verification { property-id: property-id })
-)
 
-(define-read-only (is-property-verified (property-id uint))
-  (let ((verification (map-get? property-verification { property-id: property-id })))
-    (if (is-none verification)
-      false
-      (let ((verify-data (unwrap-panic verification)))
-        (and
-          (get verified verify-data)
-          (< (get-block-height) (get verification-expiry verify-data))
-        )
-      )
-    )
-  )
-)
 
 
 (define-read-only (get-last-history-index (property-id uint))
