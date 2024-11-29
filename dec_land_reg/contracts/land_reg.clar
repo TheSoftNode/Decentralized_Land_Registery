@@ -35,6 +35,17 @@
   }
 )
 
+(define-map property-disputes
+  { property-id: uint, dispute-id: uint }
+  {
+    complainant: principal,
+    description: (string-ascii 256),
+    status: (string-ascii 20),
+    filing-date: uint,
+    resolution-date: (optional uint)
+  }
+)
+
 (define-map properties
   { property-id: uint }
   {
@@ -211,6 +222,67 @@
     )
   )
 )
+
+(define-public (file-property-dispute 
+    (property-id uint)
+    (description (string-ascii 256))
+  )
+  (let (
+    (dispute-id (get-next-dispute-id property-id))
+    (existing-property (map-get? properties { property-id: property-id }))
+  )
+    (if (is-none existing-property)
+      err-not-found
+      (ok (map-set property-disputes
+        { property-id: property-id, dispute-id: dispute-id }
+        {
+          complainant: tx-sender,
+          description: description,
+          status: "pending",
+          filing-date: (get-block-height),
+          resolution-date: none
+        }
+      ))
+    )
+  )
+)
+
+(define-private (get-next-dispute-id (property-id uint))
+  (let ((last-dispute (fold get-max-dispute-id (map-to get-max-dispute-id property-disputes) u0)))
+    (+ last-dispute u1)
+  )
+)
+
+(define-private (get-max-dispute-id (dispute {property-id: uint, dispute-id: uint}) (max-id uint))
+  (if (> (get dispute-id dispute) max-id)
+    (get dispute-id dispute)
+    max-id
+  )
+)
+
+(define-public (resolve-property-dispute
+    (property-id uint)
+    (dispute-id uint)
+  )
+  (let (
+    (existing-dispute (map-get? property-disputes { property-id: property-id, dispute-id: dispute-id }))
+    (is-authorized-resolver (is-eq tx-sender contract-owner))
+  )
+    (if (or (is-none existing-dispute) (not is-authorized-resolver))
+      err-not-found
+      (ok (map-set property-disputes
+        { property-id: property-id, dispute-id: dispute-id }
+        (merge (unwrap-panic existing-dispute)
+          {
+            status: "resolved",
+            resolution-date: (some (get-block-height))
+          }
+        )
+      ))
+    )
+  )
+)
+
 
 (define-public (add-property-metadata 
     (property-id uint)
